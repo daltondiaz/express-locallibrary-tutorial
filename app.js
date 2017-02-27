@@ -5,6 +5,8 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
+var compression = require('compression');
+var helmet = require('helmet');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
@@ -14,7 +16,7 @@ var app = express();
 
 //Set up mongoose connection
 var mongoose = require('mongoose');
-var mongoDB = 'mongodb://daltondiaz:dalton00@ds019839.mlab.com:19839/local_library'
+var mongoDB = process.env.MONGODB_URI || 'mongodb://daltondiaz:dalton00@ds019839.mlab.com:19839/local_library'
 mongoose.connect(mongoDB);
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'MongoDB connection error;'));
@@ -25,6 +27,8 @@ app.set('view engine', 'pug');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(helmet());
+app.use(compression());
 app.use(logger('dev'));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
