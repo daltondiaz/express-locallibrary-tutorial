@@ -86,25 +86,95 @@ exports.genre_create_post = function(req, res, next) {
 exports.genre_delete_get = function(req, res, next) {
     async.parallel({
       genre: function(callback){
-        Genre.findById(req.body.id).exec(callback);
+        Genre.findById(req.params.id).exec(callback);
       },
+      books : function(callback){
+        Book.find({'genre': req.params.id})
+        .exec(callback);
+      }
     },function(err, results){
       if(err){ return next(err); }
-      res.render('genre_delete',{title: 'Genre Delete'});
+      res.render('genre_delete',{title: 'Genre Delete',
+        genre: results.genre,
+        books: results.books});
     });
 };
 
 // Handle Genre delete on POST
 exports.genre_delete_post = function(req, res, next) {
-    res.send('NOT IMPLEMENTED: Genre delete POST' );
+    req.checkBody('genreid', 'Genre must exist').notEmpty();
+
+    async.parallel({
+      genre: function(callback){
+        Genre.findById(req.body.genreid).exec(callback);
+      },
+      books : function(callback){
+        Book.find({'genre': req.body.genreid})
+        .exec(callback);
+      },
+    }, function(err, results){
+      if(err){ return next(err); }
+      if(results.books > 0){
+        res.render('genre_delete', {title: 'Genre Delete',
+          genre: results.genre,
+          books: results.books});
+
+        return;
+      }else{
+        Genre.findByIdAndRemove(req.body.genreid, function deleteGenre(err){
+          if(err){ return next(err); }
+          res.redirect('/catalog/genres');
+        });
+      }
+    });
 };
 
 // Display Genre update form on GET
 exports.genre_update_get = function(req, res, next) {
-    res.send('NOT IMPLEMENTED: Genre update GET' );
+    req.sanitize('id').escape();
+    req.sanitize('id').trim();
+
+    Genre.findById(req.params.id)
+      .exec(function(err, result){
+        if(err) { return next(err); }
+        res.render('genre_form', {title: 'Update Genre',
+          genre: result});
+      });
 };
 
 // Handle Genre update on POST
 exports.genre_update_post = function(req, res, next) {
-    res.send('NOT IMPLEMENTED: Genre update POST' );
+
+    req.sanitize('id').escape();
+    req.sanitize('id').trim();
+
+    req.checkBody('name','Name of Drama must not be empty.').notEmpty();
+
+    req.sanitize('name').escape();
+    req.sanitize('name').trim();
+
+    var genre = new Genre(
+      {
+        name: req.body.name,
+        _id: req.params.id
+      }
+    );
+
+    var errors = req.validationErrors();
+
+    if(errors){
+      Genre.findById(req.params.id)
+        .exec(function(err, result){
+          if(err) { return next(err); }
+          res.render('genre_form', {title: 'Update Genre',
+            genre: result,
+            errors: errors});
+        });
+    }else{
+      Genre.findByIdAndUpdate(req.params.id, genre, {}, function(err, thegenre){
+        if(err){ return next(err); }
+        res.redirect(thegenre.url);
+      });
+    }
+
 };
